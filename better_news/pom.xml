@@ -31,6 +31,12 @@
     	<artifactId>lingpipe</artifactId>
     	<version>4.0.1</version>
     </dependency>
+    <dependency>
+    	<groupId>3rdparty</groupId>
+    	<artifactId>minor_third</artifactId>
+    	<version>1.0</version>
+    </dependency>
+
   </dependencies>
   <build>
     <plugins>

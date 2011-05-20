@@ -1,6 +1,7 @@
 package com.caseystella.news;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -12,9 +13,15 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
-import com.caseystella.news.nlp.SubjectiveSentimentClassifier;
+import com.caseystella.news.interfaces.AbstractMinorThirdClassifier;
+import com.caseystella.news.interfaces.AbstractNewsClassifier;
+import com.caseystella.news.nlp.ClassifierEvaluator;
+import com.caseystella.news.nlp.util.CompositionPreprocessor;
+import com.caseystella.news.nlp.util.PorterStemmerPreprocessor;
+import com.caseystella.news.nlp.util.SubjectivityPreprocessor;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
@@ -23,6 +30,13 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.io.Files;
 import com.google.common.io.LineProcessor;
 import com.sun.tools.javac.util.Pair;
+
+import edu.cmu.minorthird.classify.BinaryBatchVersion;
+import edu.cmu.minorthird.classify.ClassifierLearner;
+import edu.cmu.minorthird.classify.ManyVsRestLearner;
+import edu.cmu.minorthird.classify.algorithms.linear.PassiveAggressiveLearner;
+import edu.cmu.minorthird.classify.algorithms.trees.AdaBoost;
+import edu.cmu.minorthird.ui.Recommended;
 
 
 
@@ -37,11 +51,13 @@ public class App
 	
     public static void main( String[] args ) throws Exception
     {
-    	File fixedPointFile = new File(args[0]);
-    	File dataDirectory = new File(args[1]);
-    	File modelFile = new File(args[2] + "-sentiment.model");
-    	File subjectivityFile = new File(args[2] + "-subjectivity.model");
+    	Resource.baseDataPath = new File(args[0]);
+    	File fixedPointFile = Resource.getIdealPointsFile();
+    	File dataDirectory = Resource.getClassifierDataDirectory();
     	
+    	File subjectivityFile = new File(Resource.getModelsDirectory(), "subjectivity.model");
+    	PorterStemmerPreprocessor tmpPreprocessor = new PorterStemmerPreprocessor();
+    	tmpPreprocessor.transform("foo bar, grok-blah");
     	LineProcessor<List<Pair<String, Float>>> preprocessor =
     		new LineProcessor<List<Pair<String, Float>>>() 
     		{
@@ -200,14 +216,35 @@ public class App
 	        		}
 	        	}
 	    	}
-	        Collections.shuffle(trainingSet);
-	        Collections.shuffle(testingSet);
+	        Collections.shuffle(trainingSet, new Random(0));
+	        Collections.shuffle(testingSet, new Random(0));
+        }
+        SubjectivityPreprocessor subjPreprocessor;
+        if(subjectivityFile.exists())
+        {
+        	subjPreprocessor = new SubjectivityPreprocessor(new FileInputStream(subjectivityFile));
+        }
+        else
+        {
+        	subjPreprocessor = new SubjectivityPreprocessor();
+        	subjPreprocessor.trainSubjectivity(Resource.getSubjectivityDataDirectory());
+        	subjPreprocessor.persist(subjectivityFile);
         }
         
-        SubjectiveSentimentClassifier classifier = new SubjectiveSentimentClassifier();
-        classifier.trainSubjectivity(new File("/Users/cstella/code/better_news/better_news/subjectivity_data"));
-        classifier.train(trainingSet);
-        classifier.evaluate(testingSet);
-        classifier.persist(modelFile, subjectivityFile);
+        AbstractNewsClassifier classifier = new AbstractMinorThirdClassifier((new CompositionPreprocessor( new PorterStemmerPreprocessor()))) {
+			
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = -5803102867652466430L;
+
+			@Override
+			public ClassifierLearner getLearner() {
+				return new ManyVsRestLearner(new AdaBoost.L(new Recommended.VotedPerceptronLearner(), 10));
+			}
+		};
+        classifier.train(trainingSet, true);
+        System.out.println();
+        ClassifierEvaluator.evaluate(classifier, testingSet);
     }
 }
