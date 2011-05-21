@@ -36,6 +36,16 @@
     	<artifactId>minor_third</artifactId>
     	<version>1.0</version>
     </dependency>
+    <dependency>
+    	<groupId>3rdparty</groupId>
+    	<artifactId>mallet</artifactId>
+    	<version>2.0</version>
+    </dependency>
+    <dependency>
+    	<groupId>3rdparty</groupId>
+    	<artifactId>malletdeps</artifactId>
+    	<version>2.0</version>
+    </dependency>
 
   </dependencies>
   <build>
