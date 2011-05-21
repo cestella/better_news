@@ -29,4 +29,9 @@ public class Resource {
 	{
 		return new File(baseDataPath, "stopwords.txt");
 	}
+	
+	public static File getLDADirectory()
+	{
+		return new File(baseDataPath, "lda");
+	}
 }

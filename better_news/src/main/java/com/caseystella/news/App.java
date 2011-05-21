@@ -1,7 +1,6 @@
 package com.caseystella.news;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -16,12 +15,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import com.caseystella.news.interfaces.AbstractMinorThirdClassifier;
 import com.caseystella.news.interfaces.AbstractNewsClassifier;
+import com.caseystella.news.interfaces.Affiliations;
 import com.caseystella.news.nlp.ClassifierEvaluator;
-import com.caseystella.news.nlp.util.CompositionPreprocessor;
-import com.caseystella.news.nlp.util.PorterStemmerPreprocessor;
-import com.caseystella.news.nlp.util.SubjectivityPreprocessor;
+import com.caseystella.news.nlp.TopicInferencer;
+import com.caseystella.news.nlp.classifier.TopicInferencerClassifier;
+import com.caseystella.news.nlp.util.NoopPreprocessor;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
@@ -30,13 +29,6 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.io.Files;
 import com.google.common.io.LineProcessor;
 import com.sun.tools.javac.util.Pair;
-
-import edu.cmu.minorthird.classify.BinaryBatchVersion;
-import edu.cmu.minorthird.classify.ClassifierLearner;
-import edu.cmu.minorthird.classify.ManyVsRestLearner;
-import edu.cmu.minorthird.classify.algorithms.linear.PassiveAggressiveLearner;
-import edu.cmu.minorthird.classify.algorithms.trees.AdaBoost;
-import edu.cmu.minorthird.ui.Recommended;
 
 
 
@@ -49,6 +41,20 @@ public class App
 	public static final int MILDLY_CONSERVATIVE = 2;
 	public static final int STRONGLY_CONSERVATIVE = 3;
 	
+	public static void copyLDA(List<Pair<File, Integer>> testingSet, List<Pair<File, Integer>> trainingSet) throws Exception
+	{
+		for(Pair<File, Integer> testingPair : testingSet)
+		{
+			File resultingDir = new File(new File(Resource.getLDADirectory(), "testing"), Affiliations.codeToName(testingPair.snd).getName());
+			Files.copy(testingPair.fst, new File(resultingDir, testingPair.fst.getName()));
+		}
+		for(Pair<File, Integer> trainingPair : trainingSet)
+		{
+			File resultingDir = new File(new File(Resource.getLDADirectory(), "training"), Affiliations.codeToName(trainingPair.snd).getName());
+			Files.copy(trainingPair.fst, new File(resultingDir, trainingPair.fst.getName()));
+		}
+	}
+	
     public static void main( String[] args ) throws Exception
     {
     	Resource.baseDataPath = new File(args[0]);
@@ -56,8 +62,7 @@ public class App
     	File dataDirectory = Resource.getClassifierDataDirectory();
     	
     	File subjectivityFile = new File(Resource.getModelsDirectory(), "subjectivity.model");
-    	PorterStemmerPreprocessor tmpPreprocessor = new PorterStemmerPreprocessor();
-    	tmpPreprocessor.transform("foo bar, grok-blah");
+    	
     	LineProcessor<List<Pair<String, Float>>> preprocessor =
     		new LineProcessor<List<Pair<String, Float>>>() 
     		{
@@ -193,6 +198,7 @@ public class App
         }
         List<Pair<File, Integer>> trainingSet = new ArrayList<Pair<File, Integer>>();
         List<Pair<File, Integer>> testingSet = new ArrayList<Pair<File, Integer>>();
+        List<Pair<File, Integer>> totalTraining = new ArrayList<Pair<File, Integer>>();
         {
 	        int trimPoint = affiliationCounts[0];
 	        int trainingPoint = (int)(TRAINING_PARTITION*trimPoint);
@@ -209,40 +215,49 @@ public class App
 	        		if(i < trainingPoint)
 	        		{
 	        			trainingSet.add(datum);
+	        			totalTraining.add(datum);
 	        		}
 	        		else
 	        		{
 	        			testingSet.add(datum);
 	        		}
 	        	}
+	        	for(int i = trimPoint;i < affiliatedDataFiles.size();++i)
+	        	{
+	        		Pair<File, Integer> datum = new Pair<File, Integer>(affiliatedDataFiles.get(i), affiliation);
+	        		totalTraining.add(datum);
+	        	}
 	    	}
 	        Collections.shuffle(trainingSet, new Random(0));
 	        Collections.shuffle(testingSet, new Random(0));
         }
-        SubjectivityPreprocessor subjPreprocessor;
-        if(subjectivityFile.exists())
-        {
-        	subjPreprocessor = new SubjectivityPreprocessor(new FileInputStream(subjectivityFile));
-        }
-        else
-        {
-        	subjPreprocessor = new SubjectivityPreprocessor();
-        	subjPreprocessor.trainSubjectivity(Resource.getSubjectivityDataDirectory());
-        	subjPreprocessor.persist(subjectivityFile);
-        }
         
-        AbstractNewsClassifier classifier = new AbstractMinorThirdClassifier((new CompositionPreprocessor( new PorterStemmerPreprocessor()))) {
-			
-			/**
-			 * 
-			 */
-			private static final long serialVersionUID = -5803102867652466430L;
+        
+        
+        AbstractNewsClassifier classifier 
+        	= new TopicInferencerClassifier( new TopicInferencer( new File(Resource.getLDADirectory(), "inferencer-250.inferencer")
+        														, new File(Resource.getModelsDirectory(), "news.mallet")
+        														, 250
+        														)
+        								   , new NoopPreprocessor()
+        								   );
+        
 
-			@Override
-			public ClassifierLearner getLearner() {
-				return new ManyVsRestLearner(new AdaBoost.L(new Recommended.VotedPerceptronLearner(), 10));
-			}
-		};
+  
+        //AbstractNewsClassifier classifier = new BoostedStumpClassifier(new CompositionPreprocessor( new PorterStemmerPreprocessor()));
+        
+//        AbstractNewsClassifier classifier = new AbstractMinorThirdClassifier((new CompositionPreprocessor( new PorterStemmerPreprocessor()))) {
+//			
+//			/**
+//			 * 
+//			 */
+//			private static final long serialVersionUID = -5803102867652466430L;
+//
+//			@Override
+//			public ClassifierLearner getLearner() {
+//				return new ManyVsRestLearner(new AdaBoost.L(new Recommended.VotedPerceptronLearner(), 10));
+//			}
+//		};
         classifier.train(trainingSet, true);
         System.out.println();
         ClassifierEvaluator.evaluate(classifier, testingSet);
