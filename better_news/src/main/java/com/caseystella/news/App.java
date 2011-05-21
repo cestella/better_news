@@ -18,9 +18,9 @@ import java.util.Set;
 import com.caseystella.news.interfaces.AbstractNewsClassifier;
 import com.caseystella.news.interfaces.Affiliations;
 import com.caseystella.news.nlp.ClassifierEvaluator;
-import com.caseystella.news.nlp.TopicInferencer;
-import com.caseystella.news.nlp.classifier.TopicInferencerClassifier;
-import com.caseystella.news.nlp.util.NoopPreprocessor;
+import com.caseystella.news.nlp.classifier.BoostedStumpClassifier;
+import com.caseystella.news.nlp.util.CompositionPreprocessor;
+import com.caseystella.news.nlp.util.PorterStemmerPreprocessor;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
@@ -234,17 +234,17 @@ public class App
         
         
         
-        AbstractNewsClassifier classifier 
-        	= new TopicInferencerClassifier( new TopicInferencer( new File(Resource.getLDADirectory(), "inferencer-250.inferencer")
-        														, new File(Resource.getModelsDirectory(), "news.mallet")
-        														, 250
-        														)
-        								   , new NoopPreprocessor()
-        								   );
+//        AbstractNewsClassifier classifier 
+//        	= new TopicInferencerClassifier( new TopicInferencer( new File(Resource.getLDADirectory(), "inferencer-250.inferencer")
+//        														, new File(Resource.getModelsDirectory(), "news.mallet")
+//        														, 250
+//        														)
+//        								   , new NoopPreprocessor()
+//        								   );
         
 
   
-        //AbstractNewsClassifier classifier = new BoostedStumpClassifier(new CompositionPreprocessor( new PorterStemmerPreprocessor()));
+        AbstractNewsClassifier classifier = new BoostedStumpClassifier(new CompositionPreprocessor( new PorterStemmerPreprocessor()));
         
 //        AbstractNewsClassifier classifier = new AbstractMinorThirdClassifier((new CompositionPreprocessor( new PorterStemmerPreprocessor()))) {
 //			
