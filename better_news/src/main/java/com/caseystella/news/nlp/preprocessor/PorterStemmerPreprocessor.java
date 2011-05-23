@@ -1,4 +1,4 @@
-package com.caseystella.news.nlp.util;
+package com.caseystella.news.nlp.preprocessor;
 
 import java.io.IOException;
 import java.nio.charset.Charset;

@@ -8,7 +8,7 @@
 	<classpathentry kind="var" path="M2_REPO/lingpipe/lingpipe/4.0.1/lingpipe-4.0.1.jar"/>
 	<classpathentry kind="var" path="M2_REPO/3rdparty/mallet/2.0/mallet-2.0.jar" sourcepath="/BASE_DIR/mallet-2.0.6/src"/>
 	<classpathentry kind="var" path="M2_REPO/3rdparty/malletdeps/2.0/malletdeps-2.0.jar"/>
-	<classpathentry kind="var" path="M2_REPO/3rdparty/minor_third/1.0/minor_third-1.0.jar"/>
+	<classpathentry kind="var" path="M2_REPO/3rdparty/minor_third/1.0/minor_third-1.0.jar" sourcepath="/BASE_DIR/minor_third/src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

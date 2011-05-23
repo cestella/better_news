@@ -1,7 +1,11 @@
 package com.caseystella.news;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,12 +19,15 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import com.caseystella.news.interfaces.AbstractNewsClassifier;
+import com.caseystella.news.interfaces.AbstractMinorThirdNewsClassifier;
 import com.caseystella.news.interfaces.Affiliations;
+import com.caseystella.news.interfaces.IPreprocessor;
 import com.caseystella.news.nlp.ClassifierEvaluator;
-import com.caseystella.news.nlp.classifier.BoostedStumpClassifier;
-import com.caseystella.news.nlp.util.CompositionPreprocessor;
-import com.caseystella.news.nlp.util.PorterStemmerPreprocessor;
+import com.caseystella.news.nlp.TopicInferencer;
+import com.caseystella.news.nlp.preprocessor.CompositionPreprocessor;
+import com.caseystella.news.nlp.preprocessor.PorterStemmerPreprocessor;
+import com.caseystella.news.nlp.preprocessor.SubjectivityPreprocessor;
+import com.caseystella.news.nlp.util.AbstractClassifier;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
@@ -29,6 +36,13 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.io.Files;
 import com.google.common.io.LineProcessor;
 import com.sun.tools.javac.util.Pair;
+
+import edu.cmu.minorthird.classify.ClassifierLearner;
+import edu.cmu.minorthird.classify.ManyVsRestLearner;
+import edu.cmu.minorthird.classify.MostFrequentFirstLearner;
+import edu.cmu.minorthird.classify.TweakedLearner;
+import edu.cmu.minorthird.classify.algorithms.trees.AdaBoost;
+import edu.cmu.minorthird.ui.Recommended;
 
 
 
@@ -196,9 +210,8 @@ public class App
 	        }
 	        Arrays.sort(affiliationCounts);
         }
-        List<Pair<File, Integer>> trainingSet = new ArrayList<Pair<File, Integer>>();
-        List<Pair<File, Integer>> testingSet = new ArrayList<Pair<File, Integer>>();
-        List<Pair<File, Integer>> totalTraining = new ArrayList<Pair<File, Integer>>();
+        List<Pair<BufferedReader, String>> trainingSet = new ArrayList<Pair<BufferedReader, String>>();
+        List<Pair<BufferedReader, String>> testingSet = new ArrayList<Pair<BufferedReader, String>>();
         {
 	        int trimPoint = affiliationCounts[0];
 	        int trainingPoint = (int)(TRAINING_PARTITION*trimPoint);
@@ -210,56 +223,71 @@ public class App
 	        	Collections.shuffle(affiliatedDataFiles);
 	        	for(int i = 0; i < trimPoint;++i)
 	        	{
-	        		Pair<File, Integer> datum = new Pair<File, Integer>(affiliatedDataFiles.get(i), affiliation);
+	        		Pair<BufferedReader, String> datum = new Pair<BufferedReader, String>(new BufferedReader(new FileReader(affiliatedDataFiles.get(i))), Affiliations.codeToName(affiliation).toString());
 	        		
 	        		if(i < trainingPoint)
 	        		{
 	        			trainingSet.add(datum);
-	        			totalTraining.add(datum);
+	        			
 	        		}
 	        		else
 	        		{
 	        			testingSet.add(datum);
 	        		}
 	        	}
-	        	for(int i = trimPoint;i < affiliatedDataFiles.size();++i)
-	        	{
-	        		Pair<File, Integer> datum = new Pair<File, Integer>(affiliatedDataFiles.get(i), affiliation);
-	        		totalTraining.add(datum);
-	        	}
+	        	
 	    	}
 	        Collections.shuffle(trainingSet, new Random(0));
 	        Collections.shuffle(testingSet, new Random(0));
         }
-        
-        
-        
-//        AbstractNewsClassifier classifier 
-//        	= new TopicInferencerClassifier( new TopicInferencer( new File(Resource.getLDADirectory(), "inferencer-250.inferencer")
-//        														, new File(Resource.getModelsDirectory(), "news.mallet")
-//        														, 250
-//        														)
-//        								   , new NoopPreprocessor()
-//        								   );
+        SubjectivityPreprocessor subjectivityPreprocessor = null;
+        if(subjectivityFile.exists())
+        {
+        	ObjectInputStream ios = new ObjectInputStream(new FileInputStream(subjectivityFile));
+        	subjectivityPreprocessor = (SubjectivityPreprocessor)ios.readObject();
+        }
+        else
+        {
+        	subjectivityPreprocessor = new SubjectivityPreprocessor(new TopicInferencer( new File(Resource.getLDADirectory(), "inferencer-250.inferencer")
+        														   , new File(Resource.getModelsDirectory(), "news.mallet")
+        														   , 250
+        														   )
+        														   );
+        	subjectivityPreprocessor.train(trainingSet, false);
+        	subjectivityPreprocessor.persist(subjectivityFile);
+        														
+        }
         
 
-  
-        AbstractNewsClassifier classifier = new BoostedStumpClassifier(new CompositionPreprocessor( new PorterStemmerPreprocessor()));
         
-//        AbstractNewsClassifier classifier = new AbstractMinorThirdClassifier((new CompositionPreprocessor( new PorterStemmerPreprocessor()))) {
-//			
-//			/**
-//			 * 
-//			 */
-//			private static final long serialVersionUID = -5803102867652466430L;
-//
-//			@Override
-//			public ClassifierLearner getLearner() {
-//				return new ManyVsRestLearner(new AdaBoost.L(new Recommended.VotedPerceptronLearner(), 10));
-//			}
-//		};
+        IPreprocessor pipePreprocessor = new CompositionPreprocessor( new PorterStemmerPreprocessor());
+  
+        
+        //AbstractClassifier<Affiliations> classifier = new BoostedStumpClassifier(pipePreprocessor);
+        
+        //AbstractClassifier<Affiliations> classifier = new NaiveBayesClassifier(pipePreprocessor);
+        
+        AbstractClassifier<Affiliations> classifier = new AbstractMinorThirdNewsClassifier(pipePreprocessor) {
+			
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = -5803102867652466430L;
+
+			@Override
+			public ClassifierLearner getLearner() {
+				return new ManyVsRestLearner
+						   ( 
+								   new AdaBoost( new edu.cmu.minorthird.classify.algorithms.trees.DecisionTreeLearner(10,6)
+						   			     , 100
+								   		 )
+								
+						   );
+			}
+		};
         classifier.train(trainingSet, true);
         System.out.println();
-        ClassifierEvaluator.evaluate(classifier, testingSet);
+        new ClassifierEvaluator<Affiliations>()
+        .evaluate(classifier, testingSet);
     }
 }

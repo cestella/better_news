@@ -1,28 +1,29 @@
 package com.caseystella.news.nlp;
 
-import java.io.File;
+import java.io.BufferedReader;
 import java.util.List;
 
 import com.aliasi.classify.BaseClassifierEvaluator;
 import com.aliasi.classify.Classification;
-import com.aliasi.util.Files;
-import com.caseystella.news.interfaces.Affiliations;
 import com.caseystella.news.interfaces.IClassifier;
+import com.caseystella.news.nlp.util.NLPUtils;
 import com.sun.tools.javac.util.Pair;
 
-public class ClassifierEvaluator 
+public class ClassifierEvaluator<T extends Enum<T>>
 {
-	public static void evaluate(IClassifier pClassifier, List<Pair<File, Integer>> pTestingData) throws Exception
+	
+	
+	public void evaluate(IClassifier<T> pClassifier, List<Pair<BufferedReader, String>> pTestingData) throws Exception
 	{
 		boolean storeInstances = false;
         BaseClassifierEvaluator<CharSequence> evaluator
             = new BaseClassifierEvaluator<CharSequence>(null,pClassifier.getCategories(),storeInstances);
-        for(Pair<File, Integer> datum : pTestingData)
+        for(Pair<BufferedReader, String> datum : pTestingData)
         {
         	
-        	Affiliations affiliation = pClassifier.classify(Files.readFromFile(datum.fst, "ISO-8859-1"));
+        	T classification = pClassifier.classify(NLPUtils.toString(datum.fst));
         	
-        	evaluator.addClassification(Affiliations.codeToName(datum.snd).getName(), new Classification(affiliation.getName()), null);
+        	evaluator.addClassification(datum.snd, new Classification(classification.toString()), null);
         }
         System.out.println(evaluator.toString());
 	}

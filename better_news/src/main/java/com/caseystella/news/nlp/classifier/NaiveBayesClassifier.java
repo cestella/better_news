@@ -1,6 +1,6 @@
 package com.caseystella.news.nlp.classifier;
 
-import java.io.File;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.List;
 
@@ -8,13 +8,13 @@ import com.aliasi.classify.Classification;
 import com.aliasi.classify.Classified;
 import com.aliasi.classify.DynamicLMClassifier;
 import com.aliasi.lm.NGramProcessLM;
-import com.aliasi.util.Files;
-import com.caseystella.news.interfaces.AbstractNewsClassifier;
 import com.caseystella.news.interfaces.Affiliations;
 import com.caseystella.news.interfaces.IPreprocessor;
+import com.caseystella.news.nlp.util.AbstractClassifier;
+import com.caseystella.news.nlp.util.NLPUtils;
 import com.sun.tools.javac.util.Pair;
 
-public class NaiveBayesClassifier extends AbstractNewsClassifier {
+public class NaiveBayesClassifier extends AbstractClassifier<Affiliations> {
 
 	/**
 	 * 
@@ -30,6 +30,11 @@ public class NaiveBayesClassifier extends AbstractNewsClassifier {
 	}
 	
 	@Override
+	public String[] getCategories() {
+		return Affiliations.getCategories();
+	}
+	
+	@Override
 	public Affiliations classify(String pInputData) throws IOException,
 			Exception {
 		return Affiliations.nameToEnum(mClassifier.classify(preprocessor.transform(pInputData)).bestCategory());
@@ -37,15 +42,15 @@ public class NaiveBayesClassifier extends AbstractNewsClassifier {
 
 	
 	@Override
-	public void train(List<Pair<File, Integer>> pTrainingData, IPreprocessor pPreprocessor) throws Exception {
+	public void train(List<Pair<BufferedReader, String>> pTrainingData, IPreprocessor pPreprocessor) throws Exception {
 
 		mClassifier = DynamicLMClassifier.createNGramProcess(getCategories(), NUM_NGRAMS);
 		System.out.println("TRAINING UNDERLYING CLASSIFIER");
-		for(Pair<File, Integer> datum : pTrainingData)
+		for(Pair<BufferedReader, String> datum : pTrainingData)
 		{
 			Classification classification
-            = new Classification(Affiliations.codeToName(datum.snd).getName());
-			 String data = pPreprocessor.transform(Files.readFromFile(datum.fst,"ISO-8859-1"));
+            = new Classification(datum.snd);
+			 String data = pPreprocessor.transform(NLPUtils.toString(datum.fst));
 			 
              Classified<CharSequence> classified
                  = new Classified<CharSequence>(data,classification);

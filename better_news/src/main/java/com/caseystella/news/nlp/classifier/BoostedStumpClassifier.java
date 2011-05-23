@@ -1,13 +1,13 @@
 package com.caseystella.news.nlp.classifier;
 
-import com.caseystella.news.interfaces.AbstractMinorThirdClassifier;
+import com.caseystella.news.interfaces.AbstractMinorThirdNewsClassifier;
 import com.caseystella.news.interfaces.IPreprocessor;
 
 import edu.cmu.minorthird.classify.ClassifierLearner;
 import edu.cmu.minorthird.classify.ManyVsRestLearner;
 import edu.cmu.minorthird.ui.Recommended;
 
-public class BoostedStumpClassifier extends AbstractMinorThirdClassifier {
+public class BoostedStumpClassifier extends AbstractMinorThirdNewsClassifier {
 
 	/**
 	 * 
@@ -18,6 +18,8 @@ public class BoostedStumpClassifier extends AbstractMinorThirdClassifier {
 		super(pPreprocessor);
 		
 	}
+	
+	
 
 	@Override
 	public ClassifierLearner getLearner() {

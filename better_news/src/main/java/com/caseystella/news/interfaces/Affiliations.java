@@ -10,12 +10,22 @@ public enum Affiliations {
 	
 	private int affiliationCode;
 	private String affiliationName;
+	private static String[] mCategories = new String[] { Affiliations.STRONGLY_LIBERAL.getName()
+			   , Affiliations.MILDLY_LIBERAL.getName()
+			   , Affiliations.MILDLY_CONSERVATIVE.getName()
+			   , Affiliations.STRONGLY_CONSERVATIVE.getName()
+			   };
+	
 	Affiliations(int pAffiliationCode, String pAffiliationName)
 	{
 		affiliationCode = pAffiliationCode;
 		affiliationName = pAffiliationName;
 	}
 	
+	public static String[] getCategories()
+	{
+		return mCategories;
+	}
 	public int getCode()
 	{
 		return affiliationCode;

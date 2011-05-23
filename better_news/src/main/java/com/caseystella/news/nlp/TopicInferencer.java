@@ -3,6 +3,7 @@ package com.caseystella.news.nlp;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
+import java.io.Serializable;
 
 import cc.mallet.pipe.Noop;
 import cc.mallet.pipe.Pipe;
@@ -12,8 +13,12 @@ import cc.mallet.types.Alphabet;
 import cc.mallet.types.InstanceList;
 
 
-public class TopicInferencer 
+public class TopicInferencer implements Serializable
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7903051611323143584L;
 	private cc.mallet.topics.TopicInferencer underlyingInferencer;
 	private Pipe pipe = null;
 	private int dimension = 0;

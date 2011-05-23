@@ -1,4 +1,6 @@
-package com.caseystella.news.statistics.util;
+package com.caseystella.news.nlp.util;
+
+import java.io.Serializable;
 
 import org.apache.commons.math.DimensionMismatchException;
 import org.apache.commons.math.linear.RealMatrix;
@@ -6,9 +8,14 @@ import org.apache.commons.math.linear.RealMatrixImpl;
 import org.apache.commons.math.stat.descriptive.moment.VectorialCovariance;
 
 @SuppressWarnings("deprecation")
-public class MahalanobisDistance {
+public class MahalanobisDistance implements Serializable
+{
 
-    //--------------------------------------------------------------------
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 7431191803229470786L;
+	//--------------------------------------------------------------------
     private final double sums[];
     private       double count;
     private       double means[];

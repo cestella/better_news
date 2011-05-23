@@ -1,23 +1,22 @@
 package com.caseystella.news.nlp.classifier;
 
-import java.io.File;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import com.caseystella.news.interfaces.AbstractNewsClassifier;
 import com.caseystella.news.interfaces.Affiliations;
 import com.caseystella.news.interfaces.IPreprocessor;
 import com.caseystella.news.nlp.TopicInferencer;
-import com.caseystella.news.statistics.util.MahalanobisDistance;
-import com.google.common.io.Files;
+import com.caseystella.news.nlp.util.AbstractClassifier;
+import com.caseystella.news.nlp.util.MahalanobisDistance;
+import com.caseystella.news.nlp.util.NLPUtils;
 import com.sun.tools.javac.util.Pair;
 
-public class TopicInferencerClassifier extends AbstractNewsClassifier {
+public class TopicInferencerClassifier extends AbstractClassifier<Affiliations> {
 
 	/**
 	 * 
@@ -57,9 +56,12 @@ public class TopicInferencerClassifier extends AbstractNewsClassifier {
 		}
 		return distances.first().snd;
 	}
-
 	@Override
-	public void train( List<Pair<File, Integer>> pTrainingData
+	public String[] getCategories() {
+		return Affiliations.getCategories();
+	}
+	@Override
+	public void train( List<Pair<BufferedReader, String>> pTrainingData
 					 , IPreprocessor pPreprocessor
 					 ) 
 	throws Exception 
@@ -70,10 +72,10 @@ public class TopicInferencerClassifier extends AbstractNewsClassifier {
 			affiliationToDistanceMetric.put(affiliation, new MahalanobisDistance(inferencer.getDimension()));
 		}
 		
-		for(Pair<File, Integer> pair : pTrainingData)
+		for(Pair<BufferedReader, String> pair : pTrainingData)
 		{
-			MahalanobisDistance distance = affiliationToDistanceMetric.get(Affiliations.codeToName(pair.snd));
-			double[] vec = inferencer.getVector(Files.toString(pair.fst, Charset.defaultCharset()));
+			MahalanobisDistance distance = affiliationToDistanceMetric.get(pair.snd);
+			double[] vec = inferencer.getVector(NLPUtils.toString(pair.fst));
 			distance.add(vec);
 		}
 		for(Affiliations affiliation : Affiliations.values())

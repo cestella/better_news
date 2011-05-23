@@ -1,12 +1,11 @@
 package com.caseystella.news.interfaces;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.Charset;
+import java.io.BufferedReader;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import com.google.common.io.Files;
+import com.caseystella.news.nlp.util.AbstractClassifier;
+import com.caseystella.news.nlp.util.NLPUtils;
 import com.sun.tools.javac.util.Pair;
 
 import edu.cmu.minorthird.classify.ClassLabel;
@@ -18,7 +17,7 @@ import edu.cmu.minorthird.classify.Feature;
 import edu.cmu.minorthird.classify.Instance;
 import edu.cmu.minorthird.classify.MutableInstance;
 
-public abstract class AbstractMinorThirdClassifier extends AbstractNewsClassifier
+public abstract class AbstractMinorThirdClassifier<T extends Enum<T>> extends AbstractClassifier<T>
 {
 	
 	/**
@@ -26,23 +25,16 @@ public abstract class AbstractMinorThirdClassifier extends AbstractNewsClassifie
 	 */
 	private static final long serialVersionUID = 1197442497374735296L;
 	
-	Classifier classifier;
+	protected Classifier classifier;
 	
 	public AbstractMinorThirdClassifier(IPreprocessor pPreprocessor) {
 		super(pPreprocessor);
 		
 	}
 	
-	@Override
-	public Affiliations classify(String pInputData) throws IOException,
-			Exception {
-		ClassLabel label = classifier.classification(makeInstance(pInputData, preprocessor));
-		if(label.bestClassName() == null)
-			return Affiliations.MILDLY_LIBERAL;
-		return Affiliations.nameToEnum(label.bestClassName());
-	}
 	
-	private Instance makeInstance(String pString, IPreprocessor pPreprocessor)
+	
+	protected Instance makeInstance(String pString, IPreprocessor pPreprocessor)
 	{
 		String data = pPreprocessor.transform(pString);
 		StringTokenizer tokenizer = new StringTokenizer(data);
@@ -58,16 +50,16 @@ public abstract class AbstractMinorThirdClassifier extends AbstractNewsClassifie
 	
 	
 	@Override
-	public void train(List<Pair<File, Integer>> pTrainingData,
+	public void train(List<Pair<BufferedReader, String>> pTrainingData,
 			IPreprocessor pPreprocessor) throws Exception {
 		ClassifierLearner learner = getLearner();
 		learner.setSchema(new ExampleSchema(getCategories()));
 		System.out.println("TRAINING ON " + pTrainingData.size() + " SAMPLES...");
-		for(Pair<File, Integer> datum : pTrainingData)
+		for(Pair<BufferedReader, String> datum : pTrainingData)
 		{
-			String strDat = Files.toString(datum.fst, Charset.defaultCharset());
+			String strDat = NLPUtils.toString(datum.fst);
 			
-			Example example = new Example(makeInstance(strDat, pPreprocessor), new ClassLabel(Affiliations.codeToName(datum.snd).getName()));
+			Example example = new Example(makeInstance(strDat, pPreprocessor), new ClassLabel(datum.snd));
 			learner.addExample(example);
 		}
 		//learner.completeTraining();
