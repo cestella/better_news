@@ -28,11 +28,11 @@ public class SubjectivityPreprocessor extends AbstractMinorThirdClassifier<Subje
 	 * 
 	 */
 	private static final long serialVersionUID = -1072441849198987921L;
-	private static double CUTOFF_PERCENTAGE = .85;
+	private static double CUTOFF_PERCENTAGE = .5;
     
    public static enum SubjectivityCategories
    {
-	   OBJECTIVE("OBJECTIVE")
+	    OBJECTIVE("OBJECTIVE")
 	  , SUBJECTIVE("SUBJECTIVE");
 	   private static String[] categories = new String[] { "OBJECTIVE", "SUBJECTIVE" };
 	   String name;

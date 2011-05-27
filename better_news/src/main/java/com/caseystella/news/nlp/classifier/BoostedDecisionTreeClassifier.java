@@ -22,10 +22,11 @@ public class BoostedDecisionTreeClassifier extends
 
 	@Override
 	public ClassifierLearner getLearner() {
+		//8,100 worked
 		return new ManyVsRestLearner
 		   ( 
-				   new AdaBoost( new edu.cmu.minorthird.classify.algorithms.trees.DecisionTreeLearner(10,6)
-		   			     , 100
+				   new AdaBoost.L( new edu.cmu.minorthird.classify.algorithms.trees.DecisionTreeLearner(15,8)
+		   			     , 150
 				   		 )
 				
 		   );

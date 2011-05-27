@@ -17,14 +17,24 @@ public class ClassifierEvaluator<T extends Enum<T>>
 	{
 		boolean storeInstances = false;
         BaseClassifierEvaluator<CharSequence> evaluator
-            = new BaseClassifierEvaluator<CharSequence>(null,pClassifier.getCategories(),storeInstances);
+            = new BaseClassifierEvaluator<CharSequence>(null,getCategories(pClassifier),storeInstances);
         for(Pair<BufferedReader, String> datum : pTestingData)
         {
         	
         	T classification = pClassifier.classify(NLPUtils.toString(datum.fst));
         	
-        	evaluator.addClassification(datum.snd, new Classification(classification.toString()), null);
+        	evaluator.addClassification(transform(datum.snd), new Classification(transform(classification.toString())), null);
         }
         System.out.println(evaluator.toString());
+	}
+	
+	public String[] getCategories(IClassifier<T> pClassifier)
+	{
+		return pClassifier.getCategories();
+	}
+	
+	public String transform(String pInstance)
+	{
+		return pInstance.toString();
 	}
 }

@@ -5,7 +5,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,15 +21,19 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import com.caseystella.news.interfaces.AbstractMinorThirdNewsClassifier;
 import com.caseystella.news.interfaces.Affiliations;
+import com.caseystella.news.interfaces.IClassifier;
 import com.caseystella.news.interfaces.IPreprocessor;
 import com.caseystella.news.nlp.ClassifierEvaluator;
 import com.caseystella.news.nlp.TopicInferencer;
+import com.caseystella.news.nlp.classifier.BoostedDecisionTreeClassifier;
+import com.caseystella.news.nlp.classifier.polarity.PolarityClassifier;
 import com.caseystella.news.nlp.preprocessor.CompositionPreprocessor;
+import com.caseystella.news.nlp.preprocessor.NoopPreprocessor;
 import com.caseystella.news.nlp.preprocessor.PorterStemmerPreprocessor;
 import com.caseystella.news.nlp.preprocessor.SubjectivityPreprocessor;
 import com.caseystella.news.nlp.util.AbstractClassifier;
+import com.caseystella.news.nlp.util.NLPUtils;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ArrayListMultimap;
@@ -36,13 +42,6 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.io.Files;
 import com.google.common.io.LineProcessor;
 import com.sun.tools.javac.util.Pair;
-
-import edu.cmu.minorthird.classify.ClassifierLearner;
-import edu.cmu.minorthird.classify.ManyVsRestLearner;
-import edu.cmu.minorthird.classify.MostFrequentFirstLearner;
-import edu.cmu.minorthird.classify.TweakedLearner;
-import edu.cmu.minorthird.classify.algorithms.trees.AdaBoost;
-import edu.cmu.minorthird.ui.Recommended;
 
 
 
@@ -54,6 +53,8 @@ public class App
 	public static final int MILDLY_LIBERAL = 1;
 	public static final int MILDLY_CONSERVATIVE = 2;
 	public static final int STRONGLY_CONSERVATIVE = 3;
+	
+
 	
 	public static void copyLDA(List<Pair<File, Integer>> testingSet, List<Pair<File, Integer>> trainingSet) throws Exception
 	{
@@ -69,13 +70,11 @@ public class App
 		}
 	}
 	
-    public static void main( String[] args ) throws Exception
-    {
-    	Resource.baseDataPath = new File(args[0]);
-    	File fixedPointFile = Resource.getIdealPointsFile();
+	public static void getTrainingAndTestingSet(List<Pair<BufferedReader, String>> trainingSet, List<Pair<BufferedReader, String>> testingSet) throws Exception
+	{
+		File fixedPointFile = Resource.getIdealPointsFile();
     	File dataDirectory = Resource.getClassifierDataDirectory();
     	
-    	File subjectivityFile = new File(Resource.getModelsDirectory(), "subjectivity.model");
     	
     	LineProcessor<List<Pair<String, Float>>> preprocessor =
     		new LineProcessor<List<Pair<String, Float>>>() 
@@ -139,8 +138,8 @@ public class App
         int[] affiliationCounts = new int[STRONGLY_CONSERVATIVE+1];
         
         {
-	        int[] partitionPoints = { 0, zeroPoint/2, zeroPoint, zeroPoint + (data.size() - zeroPoint)/2, data.size() - 1};
-	        
+        	int[] partitionPoints = { 0, zeroPoint/2, zeroPoint, zeroPoint + (data.size() - zeroPoint)/2, data.size() - 1};
+
 	        for(int i = 1;i < partitionPoints.length;i++)
 	        {
 	        	final float leftEndpoint = data.get(partitionPoints[i - 1]).snd;
@@ -210,8 +209,7 @@ public class App
 	        }
 	        Arrays.sort(affiliationCounts);
         }
-        List<Pair<BufferedReader, String>> trainingSet = new ArrayList<Pair<BufferedReader, String>>();
-        List<Pair<BufferedReader, String>> testingSet = new ArrayList<Pair<BufferedReader, String>>();
+        
         {
 	        int trimPoint = affiliationCounts[0];
 	        int trainingPoint = (int)(TRAINING_PARTITION*trimPoint);
@@ -240,54 +238,108 @@ public class App
 	        Collections.shuffle(trainingSet, new Random(0));
 	        Collections.shuffle(testingSet, new Random(0));
         }
-        SubjectivityPreprocessor subjectivityPreprocessor = null;
-        if(subjectivityFile.exists())
-        {
-        	ObjectInputStream ios = new ObjectInputStream(new FileInputStream(subjectivityFile));
-        	subjectivityPreprocessor = (SubjectivityPreprocessor)ios.readObject();
-        }
-        else
-        {
-        	subjectivityPreprocessor = new SubjectivityPreprocessor(new TopicInferencer( new File(Resource.getLDADirectory(), "inferencer-250.inferencer")
-        														   , new File(Resource.getModelsDirectory(), "news.mallet")
-        														   , 250
-        														   )
-        														   );
-        	subjectivityPreprocessor.train(trainingSet, false);
-        	subjectivityPreprocessor.persist(subjectivityFile);
-        														
-        }
+	}
+	
+	public static void train(boolean pPersist) throws Exception
+	{
+		List<Pair<BufferedReader, String>> trainingSet = new ArrayList<Pair<BufferedReader, String>>();
+        List<Pair<BufferedReader, String>> testingSet = new ArrayList<Pair<BufferedReader, String>>();
+        getTrainingAndTestingSet(trainingSet, testingSet);
+      
         
 
         
         IPreprocessor pipePreprocessor = new CompositionPreprocessor( new PorterStemmerPreprocessor());
   
-        
+        AbstractClassifier<Affiliations> classifier = new BoostedDecisionTreeClassifier(pipePreprocessor);
         //AbstractClassifier<Affiliations> classifier = new BoostedStumpClassifier(pipePreprocessor);
         
         //AbstractClassifier<Affiliations> classifier = new NaiveBayesClassifier(pipePreprocessor);
-        
+        /*
         AbstractClassifier<Affiliations> classifier = new AbstractMinorThirdNewsClassifier(pipePreprocessor) {
 			
-			/**
-			 * 
-			 */
+			
 			private static final long serialVersionUID = -5803102867652466430L;
 
 			@Override
 			public ClassifierLearner getLearner() {
-				return new ManyVsRestLearner
-						   ( 
-								   new AdaBoost( new edu.cmu.minorthird.classify.algorithms.trees.DecisionTreeLearner(10,6)
-						   			     , 100
-								   		 )
-								
-						   );
+				return new SVMLearner();
 			}
 		};
+		*/
         classifier.train(trainingSet, true);
         System.out.println();
         new ClassifierEvaluator<Affiliations>()
         .evaluate(classifier, testingSet);
+        if(pPersist)
+        {
+        	classifier.persist(new File(Resource.getModelsDirectory(), "news-classifier.model"));
+        }
+	}
+	
+	@SuppressWarnings("unchecked")
+	public static void evaluate() throws Exception
+	{
+		List<Pair<BufferedReader, String>> trainingSet = new ArrayList<Pair<BufferedReader, String>>();
+        List<Pair<BufferedReader, String>> testingSet = new ArrayList<Pair<BufferedReader, String>>();
+        getTrainingAndTestingSet(trainingSet, testingSet);
+        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File(Resource.getModelsDirectory(), "news-classifier.model")));
+        IClassifier<Affiliations> classifier = (IClassifier<Affiliations>)ois.readObject();
+		 new ClassifierEvaluator<Affiliations>()
+		 {
+			 @Override
+			public String[] getCategories(IClassifier<Affiliations> pClassifier) {
+				return new String[]{"LIBERAL", "CONSERVATIVE"};
+			}
+			 @Override
+			public String transform(String pInstance) {
+				 if(pInstance.equals("MILDLY_LIBERAL") || pInstance.equals("STRONGLY_LIBERAL"))
+				 {
+					return "LIBERAL"; 
+				 }
+				 else
+				 {
+					 return "CONSERVATIVE";
+				 }
+				
+			}
+		 }
+	        .evaluate(classifier, testingSet);
+	        
+		PolarityClassifier polarityClassifier = new PolarityClassifier(new TopicInferencer(new File(Resource.getLDADirectory(), "inferencer-250.inferencer")
+																					 	  , new File(Resource.getModelsDirectory(), "news.mallet")
+																						  , 250
+																						  )
+																	  );
+		List<Pair<BufferedReader, String>> universe = new ArrayList<Pair<BufferedReader,String>>();
+		universe.addAll(trainingSet);
+		universe.addAll(testingSet);
+		polarityClassifier.train(universe, new NoopPreprocessor());
+		String line = null;
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		while( (line = br.readLine()) != null)
+		{
+			URL retrieveUrl = new URL(line);
+			System.out.println("Retrieving and classifying " + line + "...");
+			String text = NLPUtils.getText(retrieveUrl);
+			System.out.println(text);
+			System.out.println("---------------------------");
+			System.out.println("Is this political? " + polarityClassifier.classify(text));
+			System.out.println("Result: " + classifier.classify(text));
+		}
+	}
+	
+    @SuppressWarnings("unchecked")
+	public static void main( String[] args ) throws Exception
+    {
+    	Resource.baseDataPath = new File(args[0]);
+    	if(args[1].equalsIgnoreCase("train"))
+    	{
+    		train(true);
+    	}
+    	else if(args[1].equalsIgnoreCase("get"))
+    	{
+    		evaluate();
+    	}
     }
 }

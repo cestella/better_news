@@ -1,6 +1,7 @@
 package com.caseystella.news.nlp.util;
 
 import java.io.BufferedReader;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -13,6 +14,9 @@ import com.aliasi.sentences.SentenceChunker;
 import com.aliasi.sentences.SentenceModel;
 import com.aliasi.tokenizer.IndoEuropeanTokenizerFactory;
 import com.aliasi.tokenizer.TokenizerFactory;
+
+import de.l3s.boilerpipe.BoilerpipeProcessingException;
+import de.l3s.boilerpipe.extractors.ArticleExtractor;
 
 public class NLPUtils {
 	static final TokenizerFactory TOKENIZER_FACTORY = IndoEuropeanTokenizerFactory.INSTANCE;
@@ -49,5 +53,11 @@ public class NLPUtils {
 			buff.append(line + "\n");
 		}
 		return buff.toString().trim();
+	}
+	
+	public static String getText(URL pUrl) throws BoilerpipeProcessingException
+	{
+		return ArticleExtractor.INSTANCE.getText(pUrl);
+		
 	}
 }

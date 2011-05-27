@@ -1,6 +1,7 @@
 package com.caseystella.news.nlp.preprocessor;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.HashSet;
 import java.util.Set;
@@ -10,14 +11,20 @@ import com.caseystella.news.interfaces.IPreprocessor;
 import com.google.common.io.Files;
 import com.google.common.io.LineProcessor;
 
-public class PorterStemmerPreprocessor implements IPreprocessor {
+public class PorterStemmerPreprocessor implements IPreprocessor, Serializable {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 954900550738215087L;
-	private static class PorterStemmer {
+	private static class PorterStemmer implements Serializable
+	{
 
-	    public String stem(String str) {
+	    /**
+		 * 
+		 */
+		private static final long serialVersionUID = -6614923757228872403L;
+
+		public String stem(String str) {
 	        // check for zero length
 	        if (str.length() > 0) {
 	            // all characters must be letters
@@ -337,10 +344,7 @@ public class PorterStemmerPreprocessor implements IPreprocessor {
 	       -------------------------------------------------------
 	    */
 
-	    // does string end with 's'?
-	    protected boolean endsWithS(String str) {
-	        return str.endsWith("s");
-	    } // end function
+	  
 
 	    // does string contain a vowel?
 	    protected boolean containsVowel(String str) {
@@ -424,6 +428,7 @@ public class PorterStemmerPreprocessor implements IPreprocessor {
 	private final PorterStemmer stemmer = new PorterStemmer();
 	public PorterStemmerPreprocessor() throws Exception
 	{
+		
 		Files.readLines( Resource.getStopwords()
 						   , Charset.defaultCharset()
 						   , new LineProcessor<String>() 
