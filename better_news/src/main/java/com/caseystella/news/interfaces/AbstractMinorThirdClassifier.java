@@ -17,7 +17,7 @@ import edu.cmu.minorthird.classify.Feature;
 import edu.cmu.minorthird.classify.Instance;
 import edu.cmu.minorthird.classify.MutableInstance;
 
-public abstract class AbstractMinorThirdClassifier<T extends Enum<T>> extends AbstractClassifier<T>
+public abstract class AbstractMinorThirdClassifier extends AbstractClassifier
 {
 	
 	/**
@@ -50,16 +50,19 @@ public abstract class AbstractMinorThirdClassifier<T extends Enum<T>> extends Ab
 	
 	
 	@Override
-	public void train(List<Pair<BufferedReader, String>> pTrainingData,
-			IPreprocessor pPreprocessor) throws Exception {
+	public void train( List<Pair<BufferedReader, String>> pTrainingData
+					 , IPreprocessor pPreprocessor
+					 , ICategoryMapper pMapper
+					 ) throws Exception 
+	{
 		ClassifierLearner learner = getLearner();
-		learner.setSchema(new ExampleSchema(getCategories()));
+		learner.setSchema(new ExampleSchema(pMapper.getCategories(getCategories())));
 		System.out.println("TRAINING ON " + pTrainingData.size() + " SAMPLES...");
 		for(Pair<BufferedReader, String> datum : pTrainingData)
 		{
 			String strDat = NLPUtils.toString(datum.fst);
 			
-			Example example = new Example(makeInstance(strDat, pPreprocessor), new ClassLabel(datum.snd));
+			Example example = new Example(makeInstance(strDat, pPreprocessor), new ClassLabel(pMapper.map(datum.snd)));
 			learner.addExample(example);
 		}
 		//learner.completeTraining();

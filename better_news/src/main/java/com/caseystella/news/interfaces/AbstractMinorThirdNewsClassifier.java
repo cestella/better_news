@@ -5,7 +5,7 @@ import java.io.IOException;
 import edu.cmu.minorthird.classify.ClassLabel;
 
 public abstract class AbstractMinorThirdNewsClassifier extends
-		AbstractMinorThirdClassifier<Affiliations> {
+		AbstractMinorThirdClassifier {
 
 	/**
 	 * 
@@ -20,11 +20,11 @@ public abstract class AbstractMinorThirdNewsClassifier extends
 	
 
 	@Override
-	public Affiliations classify(String pInputData) throws IOException, Exception {
+	public String classify(String pInputData) throws IOException, Exception {
 		ClassLabel label = classifier.classification(makeInstance(pInputData, preprocessor));
 		if(label.bestClassName() == null)
-			return Affiliations.MILDLY_LIBERAL;
-		return Affiliations.nameToEnum(label.bestClassName());
+			return Affiliations.STRONGLY_LIBERAL.toString();
+		return label.bestClassName();
 	}
 
 	@Override

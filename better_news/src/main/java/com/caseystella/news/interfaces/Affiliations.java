@@ -7,7 +7,7 @@ public enum Affiliations {
 	MILDLY_LIBERAL(App.MILDLY_LIBERAL, "MILDLY_LIBERAL"),
 	MILDLY_CONSERVATIVE(App.MILDLY_CONSERVATIVE, "MILDLY_CONSERVATIVE"),
 	STRONGLY_CONSERVATIVE(App.STRONGLY_CONSERVATIVE, "STRONGLY_CONSERVATIVE");
-	
+
 	private int affiliationCode;
 	private String affiliationName;
 	private static String[] mCategories = new String[] { Affiliations.STRONGLY_LIBERAL.getName()
@@ -15,13 +15,13 @@ public enum Affiliations {
 			   , Affiliations.MILDLY_CONSERVATIVE.getName()
 			   , Affiliations.STRONGLY_CONSERVATIVE.getName()
 			   };
-	
+
 	Affiliations(int pAffiliationCode, String pAffiliationName)
 	{
 		affiliationCode = pAffiliationCode;
 		affiliationName = pAffiliationName;
 	}
-	
+
 	public static String[] getCategories()
 	{
 		return mCategories;
@@ -30,12 +30,12 @@ public enum Affiliations {
 	{
 		return affiliationCode;
 	}
-	
+
 	public String getName()
 	{
 		return affiliationName;
 	}
-	
+
 	public static Affiliations codeToName(int pCode) throws Exception
 	{
 		if(pCode == STRONGLY_LIBERAL.getCode())	
@@ -48,9 +48,9 @@ public enum Affiliations {
 			return STRONGLY_CONSERVATIVE;
 		else
 			throw new Exception("Unable to find Affiliations");
-		
+
 	}
-	
+
 	public static Affiliations nameToEnum(String pName) throws Exception
 	{
 		if(pName.equalsIgnoreCase(STRONGLY_LIBERAL.getName()))

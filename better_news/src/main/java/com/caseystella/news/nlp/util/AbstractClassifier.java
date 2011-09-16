@@ -7,12 +7,13 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.List;
 
+import com.caseystella.news.interfaces.ICategoryMapper;
 import com.caseystella.news.interfaces.IClassifier;
 import com.caseystella.news.interfaces.IPreprocessor;
 import com.caseystella.news.nlp.preprocessor.NoopPreprocessor;
 import com.sun.tools.javac.util.Pair;
 
-public abstract class AbstractClassifier<T extends Enum<T>> implements IClassifier<T>, Serializable {
+public abstract class AbstractClassifier implements IClassifier, Serializable {
 
 	/**
 	 * 
@@ -34,10 +35,11 @@ public abstract class AbstractClassifier<T extends Enum<T>> implements IClassifi
 
 	
 	
-	public void train(List<Pair<BufferedReader, String>> pTrainingData, boolean pUsePreprocessor) throws Exception
+	public void train(List<Pair<BufferedReader, String>> pTrainingData, boolean pUsePreprocessor, ICategoryMapper pMapper) throws Exception
 	{
 		train(pTrainingData
 			 , pUsePreprocessor?preprocessor:new NoopPreprocessor()
+			 , pMapper
 			 );
 	}
 

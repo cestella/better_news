@@ -1,0 +1,16 @@
+We sent an email to:
+Please click on the link inside the email to complete your registration
+Please register to gain free access to WSJ tools.
+An account already exists for the email address entered.
+This service is temporary unavailable due to system maintenance. Please try again later.
+The username entered is already associated with
+another account. Please enter a different username
+The email address you have entered is already in use.
+Please re-enter the email address.
+First Name
+Email (your email address will be your login)
+Confirm Email
+Confirm Password
+Company Size (Optional)
+From time to time, we will send you e-mail announcements on new features and special offers from The Wall Street Journal Online.
+Create a profile for me in the Journal Community

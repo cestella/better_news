@@ -1,0 +1,16 @@
+Ñ By Kevin Drum
+| Fri May. 13, 2011 3:00 AM PDT
+I've never been a fan of raising the Social Security retirement age. It's a blunt instrument mainly favored by journalists and policymakers who don't plan to retire at age 65 anyway and figure that asking people to work a little bit longer than they used to is no big deal. But people who don't have white collar jobs quite plainly don't feel the same way about it, as the skyrocketing number of people who retire early at age 62 demonstrates. We've already raised the full retirement age to 67 (this was part of the 1983 Social Security deal put in place by the Greenspan Commission), and I think there are plenty of better ways of bringing Social Security into balance than by raising it yet again.
+Aaron Carroll demonstrates this dramatically with the chart below, taken from a paper by Hilary Waldren. As you can see, life expectancy in the top half of the income distribution has indeed risen dramatically over the past few decades. But in the bottom half of the income distribution, it's barely risen at all.
+I want to make it crystal clear what this means, using further data from Waldren's paper combined with the increase in
+retirement age that's already scheduled to take effect. This is for workers in the bottom half of the income distribution:
+If you retired in 1977 at age 65, your life expectancy was 14.8 years.
+If you retired in 2006 at age 65 years and 8 months, your life expectancy was 15.4 years.
+Using a simple linear extrapolation, if you retire in 2025 at age 67, your life expectancy will be 14.9 years.
+So that's it. Over the course of half a century, thanks to the increase in retirement age already scheduled by law1, the poor and the working class will have seen the length of their retirements increase by a grand total of one month. Yippee!
+Keep this firmly in mind whenever someone talks about how life expectancies have skyrocketed and we can't afford long, leisurely retirements anymore. If you're fairly well off and work at a white collar job, there's something to this. If you're not, it's bunk.
+If you want to use rising life expectancy as an argument for means testing Social Security, or perhaps for reducing benefits for high earners, the data here gives you some good ammunition. Personally, I'm not sure this is the best way of tackling Social Security solvency either, but it's certainly an arguable point. Maybe modest means testing should be part of a bigger solution.
+But raising the retirement age? Go tell that to a clerk or a factory worker. They won't be quite as thrilled about this as people who write newspaper columns for a living, and they have pretty good reason not to be. It's a lousy idea.
+1You can still take early retirement at age 62 no matter what year you retire, but you get reduced benefits Ñ and those benefits are being gradually reduced even further as the full retirement age goes up. Actuarially, early retirement doesn't change a thing. If you're in the bottom half of the income distribution, the total expected payout of your Social Security benefits will have risen by one month's worth between 1977 and 2025 no matter what age you choose to retire.
+Front page image: Celine Nadeau
+If You Liked This, You Might Also Like...

@@ -9,6 +9,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import com.caseystella.news.interfaces.Affiliations;
+import com.caseystella.news.interfaces.ICategoryMapper;
 import com.caseystella.news.interfaces.IPreprocessor;
 import com.caseystella.news.nlp.TopicInferencer;
 import com.caseystella.news.nlp.util.AbstractClassifier;
@@ -16,7 +17,7 @@ import com.caseystella.news.nlp.util.MahalanobisDistance;
 import com.caseystella.news.nlp.util.NLPUtils;
 import com.sun.tools.javac.util.Pair;
 
-public class TopicInferencerClassifier extends AbstractClassifier<Affiliations> {
+public class TopicInferencerClassifier extends AbstractClassifier {
 
 	/**
 	 * 
@@ -33,7 +34,7 @@ public class TopicInferencerClassifier extends AbstractClassifier<Affiliations> 
 	}
 
 	@Override
-	public Affiliations classify(String pInputData) throws IOException,	Exception 
+	public String classify(String pInputData) throws IOException,	Exception 
 	{
 		SortedSet<Pair<Double, Affiliations> > distances 
 			= new TreeSet<Pair<Double, Affiliations>>( new Comparator<Pair<Double, Affiliations>>() 
@@ -52,17 +53,23 @@ public class TopicInferencerClassifier extends AbstractClassifier<Affiliations> 
 		for(Affiliations affiliation : Affiliations.values())
 		{
 			MahalanobisDistance distance = affiliationToDistanceMetric.get(affiliation);
-			distances.add(new Pair<Double, Affiliations>(distance.distance(vec), affiliation));
+			double mDistance = distance.distance(vec);
+			//System.out.println(affiliation + " -> " + mDistance);
+			distances.add(new Pair<Double, Affiliations>(mDistance, affiliation));
 		}
-		return distances.first().snd;
+		return distances.first().snd.toString();
 	}
 	@Override
 	public String[] getCategories() {
 		return Affiliations.getCategories();
 	}
+	
+	
+	
 	@Override
 	public void train( List<Pair<BufferedReader, String>> pTrainingData
 					 , IPreprocessor pPreprocessor
+					 , ICategoryMapper pMapper
 					 ) 
 	throws Exception 
 	{
@@ -74,7 +81,7 @@ public class TopicInferencerClassifier extends AbstractClassifier<Affiliations> 
 		
 		for(Pair<BufferedReader, String> pair : pTrainingData)
 		{
-			MahalanobisDistance distance = affiliationToDistanceMetric.get(pair.snd);
+			MahalanobisDistance distance = affiliationToDistanceMetric.get(Affiliations.nameToEnum(pair.snd));
 			double[] vec = inferencer.getVector(NLPUtils.toString(pair.fst));
 			distance.add(vec);
 		}
@@ -84,5 +91,8 @@ public class TopicInferencerClassifier extends AbstractClassifier<Affiliations> 
 		}
 		
 	}
-
+	public List<List<String>> getTopics(String pDoc, int numTopics) throws Exception
+	{
+		return inferencer.getTopics(pDoc, numTopics);
+	}
 }

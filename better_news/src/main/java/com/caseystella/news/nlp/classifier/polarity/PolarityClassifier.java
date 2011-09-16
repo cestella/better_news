@@ -1,14 +1,11 @@
 package com.caseystella.news.nlp.classifier.polarity;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-import com.caseystella.news.Resource;
+import com.caseystella.news.interfaces.ICategoryMapper;
 import com.caseystella.news.interfaces.IPreprocessor;
 import com.caseystella.news.nlp.TopicInferencer;
 import com.caseystella.news.nlp.preprocessor.NoopPreprocessor;
@@ -17,7 +14,7 @@ import com.caseystella.news.nlp.util.MahalanobisDistance;
 import com.caseystella.news.nlp.util.NLPUtils;
 import com.sun.tools.javac.util.Pair;
 
-public class PolarityClassifier extends AbstractClassifier<PolarityClassifier.PoliticalPolarity> {
+public class PolarityClassifier extends AbstractClassifier {
 	
 	 /**
 	 * 
@@ -47,12 +44,12 @@ public class PolarityClassifier extends AbstractClassifier<PolarityClassifier.Po
 	}
 
 	@Override
-	public PoliticalPolarity classify(String pInputData) throws IOException,
+	public String classify(String pInputData) throws IOException,
 			Exception {
 		double distancePt = distance.distance(inferencer.getVector(pInputData));
 		System.out.println("Distance = " + distancePt);
-		if(distancePt > cutoffPoint) return PoliticalPolarity.APOLITICAL;
-		else return PoliticalPolarity.POLITICAL;
+		if(distancePt > cutoffPoint) return PoliticalPolarity.APOLITICAL.toString();
+		else return PoliticalPolarity.POLITICAL.toString();
 	}
 
 	@Override
@@ -62,7 +59,7 @@ public class PolarityClassifier extends AbstractClassifier<PolarityClassifier.Po
 
 	@Override
 	public void train(List<Pair<BufferedReader, String>> pTrainingData,
-			IPreprocessor pPreprocessor) throws Exception 
+			IPreprocessor pPreprocessor, ICategoryMapper pMapper) throws Exception 
 	{
 		
 		System.out.println("TRAINING OBJECTIVITY CLASSIFIER");

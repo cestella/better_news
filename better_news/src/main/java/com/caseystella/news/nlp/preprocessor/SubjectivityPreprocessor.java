@@ -9,6 +9,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import com.caseystella.news.interfaces.AbstractMinorThirdClassifier;
+import com.caseystella.news.interfaces.ICategoryMapper;
 import com.caseystella.news.interfaces.IPreprocessor;
 import com.caseystella.news.nlp.TopicInferencer;
 import com.caseystella.news.nlp.util.AbstractComponentComparator;
@@ -20,7 +21,7 @@ import edu.cmu.minorthird.classify.ClassifierLearner;
 import edu.cmu.minorthird.classify.ManyVsRestLearner;
 import edu.cmu.minorthird.ui.Recommended;
 
-public class SubjectivityPreprocessor extends AbstractMinorThirdClassifier<SubjectivityPreprocessor.SubjectivityCategories> 
+public class SubjectivityPreprocessor extends AbstractMinorThirdClassifier 
 									  implements IPreprocessor
 {
 
@@ -28,7 +29,7 @@ public class SubjectivityPreprocessor extends AbstractMinorThirdClassifier<Subje
 	 * 
 	 */
 	private static final long serialVersionUID = -1072441849198987921L;
-	private static double CUTOFF_PERCENTAGE = .5;
+	private static double CUTOFF_PERCENTAGE = .3;
     
    public static enum SubjectivityCategories
    {
@@ -73,7 +74,7 @@ public class SubjectivityPreprocessor extends AbstractMinorThirdClassifier<Subje
 			List<String> sentences = NLPUtils.extractSentences(pData);
 			for(String sentence : sentences)
 			{
-				if(classify(sentence) == SubjectivityCategories.SUBJECTIVE){
+				if(classify(sentence).equals(SubjectivityCategories.SUBJECTIVE)){
 					buff.append(sentence + "\n");
 				}
 			}
@@ -92,9 +93,9 @@ public class SubjectivityPreprocessor extends AbstractMinorThirdClassifier<Subje
 	}
 	
 	@Override
-	public SubjectivityCategories classify(String pInputData) throws IOException,
+	public String classify(String pInputData) throws IOException,
 			Exception {
-		return distance.distance(inferencer.getVector(pInputData)) < cutoffPoint?SubjectivityCategories.OBJECTIVE:SubjectivityCategories.SUBJECTIVE;
+		return (distance.distance(inferencer.getVector(pInputData)) < cutoffPoint?SubjectivityCategories.OBJECTIVE:SubjectivityCategories.SUBJECTIVE).toString();
 //		ClassLabel label = classifier.classification(makeInstance(pInputData, preprocessor));
 //		if(label.bestClassName() == null)
 //			return SubjectivityCategories.OBJECTIVE;
@@ -109,7 +110,7 @@ public class SubjectivityPreprocessor extends AbstractMinorThirdClassifier<Subje
 	
 	@Override
 	public void train(List<Pair<BufferedReader, String>> pTrainingData,
-			IPreprocessor pPreprocessor) throws Exception 
+			IPreprocessor pPreprocessor, ICategoryMapper pMapper) throws Exception 
 	{
 		
 		System.out.println("TRAINING OBJECTIVITY CLASSIFIER");

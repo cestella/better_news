@@ -21,12 +21,14 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import com.caseystella.news.interfaces.AbstractMinorThirdNewsClassifier;
 import com.caseystella.news.interfaces.Affiliations;
+import com.caseystella.news.interfaces.ICategoryMapper;
 import com.caseystella.news.interfaces.IClassifier;
 import com.caseystella.news.interfaces.IPreprocessor;
+import com.caseystella.news.interfaces.IdentityCategoryMapper;
 import com.caseystella.news.nlp.ClassifierEvaluator;
 import com.caseystella.news.nlp.TopicInferencer;
-import com.caseystella.news.nlp.classifier.BoostedDecisionTreeClassifier;
 import com.caseystella.news.nlp.classifier.polarity.PolarityClassifier;
 import com.caseystella.news.nlp.preprocessor.CompositionPreprocessor;
 import com.caseystella.news.nlp.preprocessor.NoopPreprocessor;
@@ -43,10 +45,17 @@ import com.google.common.io.Files;
 import com.google.common.io.LineProcessor;
 import com.sun.tools.javac.util.Pair;
 
+import edu.cmu.minorthird.classify.ClassifierLearner;
+import edu.cmu.minorthird.classify.ManyVsRestLearner;
+import edu.cmu.minorthird.classify.algorithms.trees.AdaBoost;
+import edu.cmu.minorthird.classify.algorithms.trees.DecisionTreeLearner;
+
 
 
 public class App 
 {
+	private static final String NON_BIASED = "MILD";
+
 	public static final float TRAINING_PARTITION = 0.7f;
 	
 	public static final int STRONGLY_LIBERAL = 0;
@@ -54,7 +63,27 @@ public class App
 	public static final int MILDLY_CONSERVATIVE = 2;
 	public static final int STRONGLY_CONSERVATIVE = 3;
 	
-
+	public static ClassifierEvaluator CLASSIFIER_EVALUATOR =
+		new ClassifierEvaluator()
+		{
+			public String transform(String pInstance) {
+				if(pInstance.contains("MILDLY") || pInstance.equals(NON_BIASED))
+				{
+					return NON_BIASED;
+				}
+				if(pInstance.equals("LIBERAL") || pInstance.equals("CONSERVATIVE"))
+					return pInstance;
+				if(pInstance.equals(Affiliations.MILDLY_LIBERAL.toString()) || pInstance.equals(Affiliations.STRONGLY_LIBERAL.toString()) )
+					return "LIBERAL";
+				else
+					return "CONSERVATIVE";
+			}
+			
+			public String[] getCategories(com.caseystella.news.interfaces.IClassifier pClassifier) 
+			{
+				return new String[] { "LIBERAL", "CONSERVATIVE", NON_BIASED };
+			}
+		};
 	
 	public static void copyLDA(List<Pair<File, Integer>> testingSet, List<Pair<File, Integer>> trainingSet) throws Exception
 	{
@@ -70,7 +99,10 @@ public class App
 		}
 	}
 	
-	public static void getTrainingAndTestingSet(List<Pair<BufferedReader, String>> trainingSet, List<Pair<BufferedReader, String>> testingSet) throws Exception
+	public static void getTrainingAndTestingSet( List<Pair<BufferedReader, String>> trainingSet
+											   , List<Pair<BufferedReader, String>> testingSet
+											   , String[] categories
+											   ) throws Exception
 	{
 		File fixedPointFile = Resource.getIdealPointsFile();
     	File dataDirectory = Resource.getClassifierDataDirectory();
@@ -138,7 +170,8 @@ public class App
         int[] affiliationCounts = new int[STRONGLY_CONSERVATIVE+1];
         
         {
-        	int[] partitionPoints = { 0, zeroPoint/2, zeroPoint, zeroPoint + (data.size() - zeroPoint)/2, data.size() - 1};
+        	double length = 5.0/8;
+        	int[] partitionPoints = { 0, (int)((1-length)*zeroPoint), zeroPoint, zeroPoint + (int)(length*(data.size() - zeroPoint)), data.size() - 1};
 
 	        for(int i = 1;i < partitionPoints.length;i++)
 	        {
@@ -174,7 +207,7 @@ public class App
 	        					, new HashSet<String>(transformedCollection)
 	        					);
 	        }
-	        
+
 	        for(Pair<String, Float> datum : data)
 	        {
 	        	boolean assigned = false;
@@ -191,10 +224,10 @@ public class App
 	        	if(!assigned)
 	        		System.err.println("Unable to assign " + datum.fst);
 	        }
-	        
+
 	        File[] dataFiles = dataDirectory.listFiles();
-	
-	        
+
+
 	        for(File dataFile : dataFiles)
 	        {
 	        	String lastName = dataFile.getName().split("_")[0].split("-")[1].toUpperCase().trim();
@@ -209,12 +242,41 @@ public class App
 	        }
 	        Arrays.sort(affiliationCounts);
         }
-        
+        Map<String, Double> categoryToProbability = new HashMap<String, Double>();
+        {
+        	Map<String, Integer> categoryCounts = new HashMap<String, Integer>();
+        	int trimPoint = affiliationCounts[0];
+        	for(int affiliation = STRONGLY_LIBERAL;affiliation <= STRONGLY_CONSERVATIVE;++affiliation)
+	    	{
+        		for(int i = 0; i < trimPoint;++i)
+	        	{
+        			String referenceCategory = CLASSIFIER_EVALUATOR.transform(Affiliations.codeToName(affiliation).toString());
+        			int count = 1;
+        			if(categoryCounts.containsKey(referenceCategory))
+        			{
+        				count = categoryCounts.get(referenceCategory) + 1;
+        			}
+        			categoryCounts.put(referenceCategory, count);
+	        	}
+        		int minimumCount = Integer.MAX_VALUE;
+        		for(Map.Entry<String, Integer> countEntry : categoryCounts.entrySet())
+        		{
+        			if(countEntry.getValue() < minimumCount)
+        			{
+        				minimumCount = countEntry.getValue();
+        			}
+        		}
+        		double targetCount = (TRAINING_PARTITION*minimumCount);
+        		for(Map.Entry<String, Integer> countEntry : categoryCounts.entrySet())
+        		{
+        			categoryToProbability.put(countEntry.getKey(), targetCount/countEntry.getValue());
+        		}
+	    	}
+        }
         {
 	        int trimPoint = affiliationCounts[0];
 	        int trainingPoint = (int)(TRAINING_PARTITION*trimPoint);
-	        
-	        
+	        Random rng = new Random(0);
 	        for(int affiliation = STRONGLY_LIBERAL;affiliation <= STRONGLY_CONSERVATIVE;++affiliation)
 	    	{
 	        	List<File> affiliatedDataFiles = affiliationToDataSet.get(affiliation);
@@ -222,59 +284,139 @@ public class App
 	        	for(int i = 0; i < trimPoint;++i)
 	        	{
 	        		Pair<BufferedReader, String> datum = new Pair<BufferedReader, String>(new BufferedReader(new FileReader(affiliatedDataFiles.get(i))), Affiliations.codeToName(affiliation).toString());
-	        		
-	        		if(i < trainingPoint)
+	        		String referenceCategory = CLASSIFIER_EVALUATOR.transform(Affiliations.codeToName(affiliation).toString());
+        			double categoryProbability = categoryToProbability.get(referenceCategory);
+	        		if(rng.nextDouble() < categoryProbability)
 	        		{
+	        			//training
 	        			trainingSet.add(datum);
-	        			
 	        		}
 	        		else
 	        		{
+	        			//testing
 	        			testingSet.add(datum);
 	        		}
+//	        		if(i < trainingPoint)
+//	        		{
+//	        			trainingSet.add(datum);
+//
+//	        		}
+//	        		else
+//	        		{
+//	        			testingSet.add(datum);
+//	        		}
 	        	}
-	        	
+
 	    	}
 	        Collections.shuffle(trainingSet, new Random(0));
 	        Collections.shuffle(testingSet, new Random(0));
+	        System.out.println("Dumping category counts for training set: ");
+	        CLASSIFIER_EVALUATOR.dumpCategoryCounts(trainingSet);
+	        System.out.println("Dumping category counts for testing set: " );
+	        CLASSIFIER_EVALUATOR.dumpCategoryCounts(testingSet);
         }
 	}
 	
-	public static void train(boolean pPersist) throws Exception
+	public static IClassifier train(boolean pPersist) throws Exception
 	{
 		List<Pair<BufferedReader, String>> trainingSet = new ArrayList<Pair<BufferedReader, String>>();
         List<Pair<BufferedReader, String>> testingSet = new ArrayList<Pair<BufferedReader, String>>();
-        getTrainingAndTestingSet(trainingSet, testingSet);
+        //getTrainingAndTestingSet(trainingSet, testingSet);
       
         
 
         
-        IPreprocessor pipePreprocessor = new CompositionPreprocessor( new PorterStemmerPreprocessor());
-  
-        AbstractClassifier<Affiliations> classifier = new BoostedDecisionTreeClassifier(pipePreprocessor);
+        
+        
+        TopicInferencer inferencer = new TopicInferencer(new File(Resource.getLDADirectory(), "reddit-inferencer-250.inferencer")
+	 	  												, new File(Resource.getModelsDirectory(), "reddit.mallet")
+		  												, 250
+		  												);
+        
+        
+        SubjectivityPreprocessor subjPrep = new SubjectivityPreprocessor(inferencer);
+        
+        for(File file : new File(Resource.baseDataPath, "reddit_data/conservative").listFiles())
+        {
+        	trainingSet.add(new Pair<BufferedReader, String>(new BufferedReader(new FileReader(file)), SubjectivityPreprocessor.SubjectivityCategories.SUBJECTIVE.toString()));
+        	
+        }
+        for(File file : new File(Resource.baseDataPath, "reddit_data/liberal").listFiles())
+        {
+        	trainingSet.add(new Pair<BufferedReader, String>(new BufferedReader(new FileReader(file)), SubjectivityPreprocessor.SubjectivityCategories.SUBJECTIVE.toString()));
+        	
+        }
+        subjPrep.train(trainingSet, false, new IdentityCategoryMapper());
+        trainingSet.clear();
+        
+        IPreprocessor pipePreprocessor = new CompositionPreprocessor(  new  PorterStemmerPreprocessor());
+        
+        //AbstractClassifier<Affiliations> classifier = new TopicInferencerClassifier(inferencer, pipePreprocessor);
+        
+        //AbstractClassifier<Affiliations> classifier = new BoostedDecisionTreeClassifier(pipePreprocessor);
         //AbstractClassifier<Affiliations> classifier = new BoostedStumpClassifier(pipePreprocessor);
         
         //AbstractClassifier<Affiliations> classifier = new NaiveBayesClassifier(pipePreprocessor);
-        /*
-        AbstractClassifier<Affiliations> classifier = new AbstractMinorThirdNewsClassifier(pipePreprocessor) {
+        //AbstractClassifier<Affiliations> classifier = new NewsClassifier(pipePreprocessor);
+//        ClassifierTrainer<? extends Classifier> trainer = 
+//        	new MaxEntTrainer();
+//        	
+//        	//new AdaBoostTrainer( new DecisionTreeTrainer(6), 150);
+//        AbstractClassifier<Affiliations> classifier = new MalletNewsClassifier(pipePreprocessor
+//        																	  ,trainer 
+//        																	  );
+        
+        AbstractClassifier classifier = new AbstractMinorThirdNewsClassifier(pipePreprocessor) {
 			
 			
 			private static final long serialVersionUID = -5803102867652466430L;
 
 			@Override
 			public ClassifierLearner getLearner() {
-				return new SVMLearner();
+				return new ManyVsRestLearner( new AdaBoost.L(new DecisionTreeLearner(10,10), 200) );
+				//return new Recommended.SVMLearner();
+				//return new Recommended.NaiveBayes();
 			}
 		};
-		*/
-        classifier.train(trainingSet, true);
+		
+        trainingSet.clear();
+        testingSet.clear();
+        getTrainingAndTestingSet(trainingSet, testingSet, CLASSIFIER_EVALUATOR.getCategories(classifier));
+        classifier.train( trainingSet
+        				, true
+        				, new ICategoryMapper() {
+							
+							@Override
+							public String map(String pString) {
+								if(pString.contains("MILDLY"))
+								{
+									return NON_BIASED;
+								}
+								if(pString.contains("LIBERAL"))
+								{
+									return "LIBERAL";
+								}
+								else
+								{
+									return "CONSERVATIVE";
+								}
+							}
+							
+							@Override
+							public String[] getCategories(String[] oldCategories) {
+								
+								return new String[]{"LIBERAL", "CONSERVATIVE", NON_BIASED};
+							}
+						}
+        				);
         System.out.println();
-        new ClassifierEvaluator<Affiliations>()
-        .evaluate(classifier, testingSet);
+        
+        CLASSIFIER_EVALUATOR.evaluate(classifier, testingSet);
         if(pPersist)
         {
         	classifier.persist(new File(Resource.getModelsDirectory(), "news-classifier.model"));
         }
+        return classifier;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -282,39 +424,22 @@ public class App
 	{
 		List<Pair<BufferedReader, String>> trainingSet = new ArrayList<Pair<BufferedReader, String>>();
         List<Pair<BufferedReader, String>> testingSet = new ArrayList<Pair<BufferedReader, String>>();
-        getTrainingAndTestingSet(trainingSet, testingSet);
         ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File(Resource.getModelsDirectory(), "news-classifier.model")));
-        IClassifier<Affiliations> classifier = (IClassifier<Affiliations>)ois.readObject();
-		 new ClassifierEvaluator<Affiliations>()
-		 {
-			 @Override
-			public String[] getCategories(IClassifier<Affiliations> pClassifier) {
-				return new String[]{"LIBERAL", "CONSERVATIVE"};
-			}
-			 @Override
-			public String transform(String pInstance) {
-				 if(pInstance.equals("MILDLY_LIBERAL") || pInstance.equals("STRONGLY_LIBERAL"))
-				 {
-					return "LIBERAL"; 
-				 }
-				 else
-				 {
-					 return "CONSERVATIVE";
-				 }
-				
-			}
-		 }
-	        .evaluate(classifier, testingSet);
-	        
-		PolarityClassifier polarityClassifier = new PolarityClassifier(new TopicInferencer(new File(Resource.getLDADirectory(), "inferencer-250.inferencer")
-																					 	  , new File(Resource.getModelsDirectory(), "news.mallet")
-																						  , 250
-																						  )
+        IClassifier classifier = (IClassifier)ois.readObject();
+        getTrainingAndTestingSet(trainingSet, testingSet, CLASSIFIER_EVALUATOR.getCategories(classifier));
+        
+        CLASSIFIER_EVALUATOR
+		 .evaluate(classifier, testingSet);
+	    TopicInferencer inferencer = new TopicInferencer(new File(Resource.getLDADirectory(), "inferencer-250.inferencer")
+	 	  , new File(Resource.getModelsDirectory(), "news.mallet")
+		  , 250
+		  );
+		PolarityClassifier polarityClassifier = new PolarityClassifier(inferencer
 																	  );
 		List<Pair<BufferedReader, String>> universe = new ArrayList<Pair<BufferedReader,String>>();
 		universe.addAll(trainingSet);
 		universe.addAll(testingSet);
-		polarityClassifier.train(universe, new NoopPreprocessor());
+		polarityClassifier.train(universe, new NoopPreprocessor(), new IdentityCategoryMapper());
 		String line = null;
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		while( (line = br.readLine()) != null)
@@ -326,6 +451,17 @@ public class App
 			System.out.println("---------------------------");
 			System.out.println("Is this political? " + polarityClassifier.classify(text));
 			System.out.println("Result: " + classifier.classify(text));
+			List<List<String>> topics = inferencer.getTopics(text, 3);
+			for( List<String> topic : topics)
+			{
+				String topicStr = new String();
+				for(String topicToken : topic)
+				{
+					topicStr += topicToken + ", ";
+				}
+				System.out.println("\t" + topicStr);
+			}
+			
 		}
 	}
 	
@@ -335,7 +471,17 @@ public class App
     	Resource.baseDataPath = new File(args[0]);
     	if(args[1].equalsIgnoreCase("train"))
     	{
-    		train(true);
+    		IClassifier classifier = null;
+    		try
+    		{
+    		 classifier = train(true);
+    		}
+    		catch(Exception ex)
+    		{
+    			ex.printStackTrace();
+    		}
+//    		System.out.println("\n\nVERIFYING AGAINST REDDIT...\n\n");
+//    		VerifyAgainstReddit.verify(classifier);
     	}
     	else if(args[1].equalsIgnoreCase("get"))
     	{

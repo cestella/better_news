@@ -1,13 +1,27 @@
 package com.caseystella.news.nlp.preprocessor;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
+import com.aliasi.hmm.HiddenMarkovModel;
+import com.aliasi.hmm.HmmDecoder;
+import com.aliasi.tag.Tagging;
+import com.aliasi.tokenizer.IndoEuropeanTokenizerFactory;
+import com.aliasi.tokenizer.Tokenizer;
+import com.aliasi.tokenizer.TokenizerFactory;
+import com.aliasi.util.Streams;
 import com.caseystella.news.Resource;
 import com.caseystella.news.interfaces.IPreprocessor;
+import com.caseystella.news.nlp.util.NLPUtils;
 import com.google.common.io.Files;
 import com.google.common.io.LineProcessor;
 
@@ -18,6 +32,7 @@ public class PorterStemmerPreprocessor implements IPreprocessor, Serializable {
 	private static final long serialVersionUID = 954900550738215087L;
 	private static class PorterStemmer implements Serializable
 	{
+		
 
 	    /**
 		 * 
@@ -426,8 +441,11 @@ public class PorterStemmerPreprocessor implements IPreprocessor, Serializable {
 	
 	private final Set<String> stopWords = new HashSet<String>();
 	private final PorterStemmer stemmer = new PorterStemmer();
+	
+	
 	public PorterStemmerPreprocessor() throws Exception
 	{
+		
 		
 		Files.readLines( Resource.getStopwords()
 						   , Charset.defaultCharset()
@@ -453,12 +471,16 @@ public class PorterStemmerPreprocessor implements IPreprocessor, Serializable {
 	@Override
 	public String transform(String pData) 
 	{
+		
 		String[] words = pData.replace('-', ' ').split(" ");
+		
 		StringBuffer output = new StringBuffer();
 		for(String word : words)
 		{
 			String transformedWord = word.replaceAll("[^\\p{L}]", "");
 			if(transformedWord.length() < 4) continue;
+			if(stopWords.contains(transformedWord.toLowerCase()))
+				continue;
 			transformedWord = stemmer.stem(transformedWord).toLowerCase();
 			if(stopWords.contains(word.toLowerCase()))
 				continue;
