@@ -1,0 +1,180 @@
+\documentclass{beamer}
+\usepackage{beamerthemesplit}
+\usepackage{multirow}
+
+\begin{document}
+\title{Better News through Machine Learning}
+\author{Casey Stella}
+\date{\today} 
+
+\frame{\titlepage} 
+
+\frame{\frametitle{Table of Contents}\tableofcontents} 
+
+\section{Problem}
+\frame{\frametitle{Statement of Problem}
+\begin{itemize}
+\item News in the internet-age is decentralized\pause
+\item This is good\pause
+  \begin{itemize}
+  \item More voices means more perspectives\pause
+  \item Greater access means more more refined coverage\pause
+  \end{itemize}
+\item This is also bad\pause
+  \begin{itemize}
+  \item It's hard to detect bias\pause
+  \item ``We report, you decide''\pause
+  \end{itemize}
+\item I want to automatically determine if text has a political slant.\pause
+  \begin{itemize}
+  \item This is a very broad problem.\pause
+  \item This is a very {\bf hard} problem.\pause
+  \item This is a very {\bf vague} problem.
+  \end{itemize}
+\end{itemize}
+}
+
+\frame{\frametitle{Challenges}
+\begin{itemize}
+\item Need to extract text from HTML\pause
+    \begin{itemize}
+    \item This is taken care of for us by the Boilerpipe library in Java\pause
+    \end{itemize}
+\item Need to classify text as political or apolitical\pause
+\item Need to classify political text as left-leaning, right-leaning or centrist\pause
+  \begin{itemize}
+  \item These categories are vague and inherrently subjective\pause
+  \item Need to make them the least subjective as possible\pause
+  \end{itemize}
+\item Be as lazy as possible
+\end{itemize}
+}
+
+
+\section{Approach}
+
+\subsection{Bias Classification}
+
+\frame{\frametitle{A Model for Political Orientation}
+\begin{itemize}
+\item This can be tackled with NLP classification techniques\pause
+\item Need a sample of politically oriented text segmented by political bias\pause
+\item ``Bias'' is difficult to characterize\pause
+  \begin{itemize}
+  \item One approach is to map politicians onto a 1-D spectrum and segment the specrum into left, right and center\pause
+  \item Use the speeches from the politicians as samples\pause
+  \item All that is left is determining relative position on the 1-D spectrum and gathering the data\pause
+  \end{itemize}
+\item Thankfully, I found a dataset with speeches from senators from the $111^{th}$ Congress
+\end{itemize}
+}
+
+\frame{\frametitle{Computational Political Science}
+\begin{itemize}
+\item Computational Political Science to the Rescue\pause
+\item The idea is to use roll-call votes to fit senators onto the 1-D spectrum from left-to-right.\pause
+\item Senators and bills are fitted to the 1-D spectrum using logistic regression\pause
+  \begin{itemize}
+  \item The fitting is such that a senator's proximity to a bill is proportional to their probability for voting 'Yay' on the bill\pause
+  \item This provides an ordering that groups senators by voting record\pause
+  \end{itemize}
+\item The hard statistics is done for me by the good people at voteview.com\pause
+\item Obviously the model is simplification, but for the purpose of this project, we'll pretend it's a pretty good model.
+\end{itemize}
+}
+
+\frame{\frametitle{Machine Learning}
+\begin{itemize}
+\item Now we have a set of documents associated with political orientations\pause
+\item We can split the dataset into a training set and testing set and evaluate different machine learning algorithms\pause
+\item Tried many algorithms, but the ones that worked best was Adaptively Boosted Decision Trees\pause
+\item Decision Tree classifiers ``learns'' a decision tree by being presented with many examples from a set of categories.  The leaves of the trees are categories and the interior nodes are input variables.\pause
+\item This is a weak classifier, but can be boosted by creating a meta-learning algorithm on top called adaptive boosting
+\end{itemize}
+}
+
+\frame{\frametitle{Evaluation of Bias Classifier}
+\begin{itemize}
+\item I chose the middle $\frac{5}{8}^{th}$ of the data to be my center\pause
+\item Total Accuracy (95\% confidence) is $78\% \pm 0.04$\pause
+\item \begin{tabular}{l|l|c|c|c|c}
+\multicolumn{2}{c}{}&\multicolumn{3}{c}{Predicted}&\\
+\cline{3-5}
+\multicolumn{2}{c|}{}&Left&Center&Right&\multicolumn{1}{c}{Total}\\
+\cline{2-5}
+\multirow{2}{*}{Actual}& Left & \begin{color}{green}$46 (69\%)$\end{color} & $16 (24\%)$ & $4 (6\%)$ & $66$\\
+\cline{2-5}
+& Center & $27 (10\%)$ & \begin{color}{green}$202 (78\%)$\end{color} & $29 (11\%)$ & $258$\\
+\cline{2-5}
+& Right & $0 (0\%)$ & $7 (11\%)$ & \begin{color}{green}$52 (88\%)$\end{color} & $59$\\
+\cline{2-5}
+\end{tabular}
+\end{itemize}
+}
+
+\subsection{Polarity Classification}
+
+\frame{\frametitle{Classifying Text as Political/Apolitical}
+\begin{itemize}
+\item We only want to look for bias in political texts, so we need to know which texts have political content.\pause
+\item Topic Models can be generated from a corpus of documents\pause
+  \begin{itemize}
+  \item The best known topic model is Latent Dirichlet Allocation\pause
+  \item Topic models create a set of vectors representing the topics in the corpus\pause
+  \item New documents can be represented as linear combinations of topics where the coefficients represent the degree to which a topic contributes to the document\pause
+  \item Such as, consider topics $v_1$ and $v_2$ which represent roughly ``healthcare'' and ``the war in iraq'', you can represent a story about hospitals in the warzone as $0.2v_1 + 0.9v_2$ and a story about a hospital closing as $0.8v_1 + 0v_2$
+  \end{itemize}
+\end{itemize}
+}
+
+\frame{\frametitle{Classifying Text as Political/Apolitical}
+\begin{itemize}
+\item We can generate a topic model from the corpus of senatorial speeches\pause
+\item This gives us a vector space and a way to map documents onto it\pause
+\item Now we can use distance metrics to construct an inclusion/exclusion criteria for political documents\pause
+\item Roughly, define a metric $||\cdot||$ and a real number $k$ such that $||\vec{v}|| < k$ implies that the document is political for any document $\vec{v}$.\pause
+\item The trick now becomes defining $||\cdot||$.
+\end{itemize}
+}
+
+\frame{\frametitle{Mahalanobis Distance}
+\begin{itemize}
+\item There are statistical distance metrics which give us the rough distance from a given dataset's ``center of mass''\pause
+\item {\bf Mahalanobis distance} is just such a distance metric\pause
+\item We have a set of documents and their respective vectors, so we can define a distance function to be the distance from this set\pause
+\item So all documents who have vectors with a sufficiently large Mahalanobis distance contain topics that are dissimilar to the corpus of political speeches.\pause
+\item Unfortunately, I haven't gotten around to evaluating this approach.
+\end{itemize}
+}
+
+\section{Conclusions}
+
+\frame{\frametitle{What did we learn?}
+\begin{itemize}
+\item Using good libraries makes hard problems much easier\pause
+\item I think I might have solved the wrong problem\pause
+  \begin{itemize}
+  \item When evaluating real data, my classifier sometimes doesn't match my gut instinct\pause
+  \item I think this may be due to training on clean data and evaluating on noisy data\pause
+  \item Also, arbitrary text from the internet isn't the same style as political speeches from senators\pause
+  \end{itemize}
+\item Machine Learning is like a wolverine on a leash.\pause
+  \begin{itemize}
+  \item Once you let it go, you're never quite sure what it's going to do or when it's going to turn on you and eat your face.\pause
+  \end{itemize}
+\item Cleaning data is important
+\end{itemize}
+}
+
+\section{Questions}
+\frame{\frametitle{Questions}
+Thanks for your attention!  Questions? \\
+\begin{itemize}
+\item Find me at http://caseystella.com 
+\item Twitter handle: @casey\_stella 
+\item Email address: cestella@gmail.com\pause
+\item Oh, and by the way, Explorys is hiring!
+\end{itemize}
+}
+
+\end{document}
