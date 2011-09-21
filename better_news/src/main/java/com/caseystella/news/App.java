@@ -170,7 +170,7 @@ public class App
         int[] affiliationCounts = new int[STRONGLY_CONSERVATIVE+1];
         
         {
-        	double length = 5.0/8;
+        	double length = (5.0/8);
         	int[] partitionPoints = { 0, (int)((1-length)*zeroPoint), zeroPoint, zeroPoint + (int)(length*(data.size() - zeroPoint)), data.size() - 1};
 
 	        for(int i = 1;i < partitionPoints.length;i++)
